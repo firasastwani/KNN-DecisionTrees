@@ -479,6 +479,47 @@ def print_tree_results(tree_results):
 
 
 # =============================================================================
+# TASK 6: PERFORMANCE METRICS FUNCTIONS
+# =============================================================================
+
+def plot_confusion_matrix(y_true, y_pred, model_name, class_names=None):
+    """Visualize confusion matrix as a heatmap."""
+    cm = confusion_matrix(y_true, y_pred)
+    
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True,
+                xticklabels=class_names, yticklabels=class_names)
+    plt.title(f'Confusion Matrix for {model_name}')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.tight_layout()
+    plt.show()
+
+
+def evaluate_model(y_true, y_pred, model_name, class_names=None):
+    """Calculate and display comprehensive evaluation metrics."""
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, average='weighted')
+    recall = recall_score(y_true, y_pred, average='weighted')
+    f1 = f1_score(y_true, y_pred, average='weighted')
+    
+    print(f"\n{model_name} Performance:")
+    print(f"  Accuracy:  {accuracy:.4f}")
+    print(f"  Precision: {precision:.4f}")
+    print(f"  Recall:    {recall:.4f}")
+    print(f"  F1 Score:  {f1:.4f}")
+    
+    plot_confusion_matrix(y_true, y_pred, model_name, class_names)
+    
+    return {
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1
+    }
+
+
+# =============================================================================
 # MAIN EXECUTION
 # =============================================================================
 
@@ -576,41 +617,6 @@ def main():
     print(f"     - tree_results['predictions']: Tree predictions for each depth")
     
     # Task 6: Performance Metrics Analysis Implementation
-
-    def plot_confusion_matrix(y_true, y_pred, model_name, class_names=None):
-        """Visualize confusion matrix as a heatmap."""
-        cm = confusion_matrix(y_true, y_pred)
-        
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True,
-                    xticklabels=class_names, yticklabels=class_names)
-        plt.title(f'Confusion Matrix for {model_name}')
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        plt.tight_layout()
-        plt.show()
-
-    def evaluate_model(y_true, y_pred, model_name, class_names=None):
-        """Calculate and display comprehensive evaluation metrics."""
-        accuracy = accuracy_score(y_true, y_pred)
-        precision = precision_score(y_true, y_pred, average='weighted')
-        recall = recall_score(y_true, y_pred, average='weighted')
-        f1 = f1_score(y_true, y_pred, average='weighted')
-        
-        print(f"\n{model_name} Performance:")
-        print(f"  Accuracy:  {accuracy:.4f}")
-        print(f"  Precision: {precision:.4f}")
-        print(f"  Recall:    {recall:.4f}")
-        print(f"  F1 Score:  {f1:.4f}")
-        
-        plot_confusion_matrix(y_true, y_pred, model_name, class_names)
-        
-        return {
-            'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
-            'f1_score': f1
-        }
     
     # Evaluate KNN models
     print("\n[Task 6] Evaluating KNN models...")
