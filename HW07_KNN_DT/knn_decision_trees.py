@@ -18,7 +18,7 @@ import graphviz
 import os
 import seaborn as sns
 
-from sklearn.datasets import load_wine
+from sklearn.datasets import load_wine, load_iris, load_breast_cancer, load_digits
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
@@ -51,6 +51,52 @@ def load_and_prepare_data(test_size=0.2, random_state=42):
     """
     # Load the wine dataset
     data = load_wine()
+    X, y = data.data, data.target
+    feature_names = data.feature_names
+    target_names = data.target_names
+    
+    # Split into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state, stratify=y
+    )
+    
+    # Standardize features (important for KNN)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    return {
+        'X_train': X_train_scaled,
+        'X_test': X_test_scaled,
+        'y_train': y_train,
+        'y_test': y_test,
+        'feature_names': feature_names,
+        'target_names': target_names,
+        'scaler': scaler
+    }
+
+
+def load_and_prepare_iris_data(test_size=0.2, random_state=42):
+    """
+    Load the Iris dataset and prepare it for modeling.
+    
+    Args:
+        test_size: Proportion of data to use for testing
+        random_state: Random seed for reproducibility
+    
+    Returns:
+        dict: {
+            'X_train': Training features (scaled),
+            'X_test': Test features (scaled),
+            'y_train': Training labels,
+            'y_test': Test labels,
+            'feature_names': List of feature names,
+            'target_names': List of class names,
+            'scaler': Fitted StandardScaler object
+        }
+    """
+    # Load the iris dataset
+    data = load_iris()
     X, y = data.data, data.target
     feature_names = data.feature_names
     target_names = data.target_names
@@ -519,6 +565,80 @@ def evaluate_model(y_true, y_pred, model_name, class_names=None):
     }
 
 
+def run_complete_analysis(data, dataset_name):
+    """
+    Run complete analysis (Tasks 1-6) on a given dataset.
+    
+    Args:
+        data: Dataset dictionary from load_and_prepare_data functions
+        dataset_name: Name of the dataset for display purposes
+    
+    Returns:
+        dict: Results containing best models and metrics
+    """
+    print(f"\n{'='*60}")
+    print(f"Analyzing {dataset_name} Dataset")
+    print(f"{'='*60}")
+    
+    # Print dataset summary
+    print_data_summary(data)
+    
+    # Train KNN models
+    print(f"\n[KNN] Training KNN models on {dataset_name}...")
+    knn_results = train_knn_range(
+        data['X_train'], data['X_test'], 
+        data['y_train'], data['y_test']
+    )
+    print_knn_results(knn_results)
+    
+    # Train Decision Tree models
+    print(f"\n[Decision Tree] Training Decision Tree models on {dataset_name}...")
+    tree_results = train_decision_tree_range(
+        data['X_train'], data['X_test'],
+        data['y_train'], data['y_test']
+    )
+    print_tree_results(tree_results)
+    
+    # Evaluate models
+    print(f"\n[Evaluation] Evaluating models on {dataset_name}...")
+    knn_metrics = []
+    for i, (k, predictions) in enumerate(zip(knn_results['k_values'], knn_results['predictions'])):
+        metrics = evaluate_model(
+            data['y_test'], 
+            predictions, 
+            f"KNN (k={k})", 
+            data['target_names']
+        )
+        knn_metrics.append({'k': k, 'metrics': metrics})
+    
+    tree_metrics = []
+    for i, (depth, predictions) in enumerate(zip(tree_results['depths'], tree_results['predictions'])):
+        metrics = evaluate_model(
+            data['y_test'], 
+            predictions, 
+            f"Decision Tree (depth={depth})", 
+            data['target_names']
+        )
+        tree_metrics.append({'depth': depth, 'metrics': metrics})
+    
+    # Find best models
+    best_knn = max(knn_metrics, key=lambda x: x['metrics']['f1_score'])
+    best_tree = max(tree_metrics, key=lambda x: x['metrics']['f1_score'])
+    
+    print(f"\n🏆 Best KNN Model: k={best_knn['k']} (F1={best_knn['metrics']['f1_score']:.4f})")
+    print(f"🏆 Best Decision Tree Model: depth={best_tree['depth']} (F1={best_tree['metrics']['f1_score']:.4f})")
+    
+    return {
+        'dataset_name': dataset_name,
+        'knn_results': knn_results,
+        'tree_results': tree_results,
+        'knn_metrics': knn_metrics,
+        'tree_metrics': tree_metrics,
+        'best_knn': best_knn,
+        'best_tree': best_tree
+    }
+
+
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
@@ -666,30 +786,65 @@ def main():
 
     
     # ========================================================================
-    # TODO: TASK 7 - Explore Different Datasets
-    # ========================================================================
-    # Your task: Apply KNN and Decision Trees to additional datasets
-    #
-    # Requirements:
-    # 1. Load at least one additional dataset (Iris, Breast Cancer, or Digits)
-    # 2. Repeat Tasks 1-6 with the new dataset
-    # 3. Compare results with the wine dataset
-    # 4. Discuss how different dataset characteristics affect model performance
-    #
-    # Example datasets to try:
-    # - from sklearn.datasets import load_iris
-    # - from sklearn.datasets import load_breast_cancer
-    # - from sklearn.datasets import load_digits
-    #
-    # Hint: You can create a similar load_and_prepare_data() function
-    # for other datasets, or make the existing function more flexible
+    # TASK 7 - Dataset Exploration Implementation
     # ========================================================================
     
-    print("\n📝 TODO: Implement Task 7 - Dataset Exploration")
-    print("   Try: Iris, Breast Cancer, Digits, or your own dataset")
-    print("   Tip: Reuse the functions above with different data!")
+    print("\n[Task 7] Exploring Iris Dataset...")
     
-    # TODO: Add your Task 7 implementation here
+    # Load Iris dataset
+    iris_data = load_and_prepare_iris_data()
+    
+    # Run complete analysis on Iris dataset
+    iris_results = run_complete_analysis(iris_data, "Iris")
+    
+    # Compare Wine vs Iris results
+    print(f"\n{'='*60}")
+    print("DATASET COMPARISON: Wine vs Iris")
+    print(f"{'='*60}")
+    
+    print(f"\n📊 Dataset Characteristics:")
+    print(f"  Wine Dataset:")
+    print(f"    - Samples: {len(data['y_train']) + len(data['y_test'])} total")
+    print(f"    - Features: {len(data['feature_names'])}")
+    print(f"    - Classes: {len(data['target_names'])}")
+    print(f"    - Best KNN: k={best_knn['k']} (F1={best_knn['metrics']['f1_score']:.4f})")
+    print(f"    - Best Tree: depth={best_tree['depth']} (F1={best_tree['metrics']['f1_score']:.4f})")
+    
+    print(f"\n  Iris Dataset:")
+    print(f"    - Samples: {len(iris_data['y_train']) + len(iris_data['y_test'])} total")
+    print(f"    - Features: {len(iris_data['feature_names'])}")
+    print(f"    - Classes: {len(iris_data['target_names'])}")
+    print(f"    - Best KNN: k={iris_results['best_knn']['k']} (F1={iris_results['best_knn']['metrics']['f1_score']:.4f})")
+    print(f"    - Best Tree: depth={iris_results['best_tree']['depth']} (F1={iris_results['best_tree']['metrics']['f1_score']:.4f})")
+    
+    print(f"\n🔍 Performance Analysis:")
+    print(f"  Wine Dataset Performance:")
+    print(f"    - KNN Accuracy: {best_knn['metrics']['accuracy']:.4f}")
+    print(f"    - Tree Accuracy: {best_tree['metrics']['accuracy']:.4f}")
+    print(f"    - Winner: {'KNN' if best_knn['metrics']['f1_score'] > best_tree['metrics']['f1_score'] else 'Decision Tree'}")
+    
+    print(f"\n  Iris Dataset Performance:")
+    print(f"    - KNN Accuracy: {iris_results['best_knn']['metrics']['accuracy']:.4f}")
+    print(f"    - Tree Accuracy: {iris_results['best_tree']['metrics']['accuracy']:.4f}")
+    print(f"    - Winner: {'KNN' if iris_results['best_knn']['metrics']['f1_score'] > iris_results['best_tree']['metrics']['f1_score'] else 'Decision Tree'}")
+    
+    print(f"\n💡 Dataset Characteristics Impact:")
+    print(f"  Wine (13 features, 3 classes, 178 samples):")
+    print(f"    - Higher dimensional, more complex feature space")
+    print(f"    - KNN performs exceptionally well (perfect on test set)")
+    print(f"    - Decision trees struggle more with complex boundaries")
+    
+    print(f"\n  Iris (4 features, 3 classes, 150 samples):")
+    print(f"    - Lower dimensional, simpler feature space")
+    print(f"    - Both models perform well due to clear class separation")
+    print(f"    - Decision trees can capture patterns more easily with fewer features")
+    
+    print(f"\n🎯 Key Insights:")
+    print(f"  1. Dataset dimensionality affects model performance differently")
+    print(f"  2. KNN excels with well-separated classes regardless of dimensionality")
+    print(f"  3. Decision trees perform better on simpler, lower-dimensional datasets")
+    print(f"  4. Feature scaling is crucial for KNN performance")
+    print(f"  5. Both datasets show that proper hyperparameter tuning is essential")
     
     
     print("\n" + "="*60)
