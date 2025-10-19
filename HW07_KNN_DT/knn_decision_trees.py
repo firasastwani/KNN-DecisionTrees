@@ -16,13 +16,14 @@ import matplotlib.image as mpimg
 from matplotlib.colors import ListedColormap
 import graphviz
 import os
+import seaborn as sns
 
 from sklearn.datasets import load_wine
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import (confusion_matrix, accuracy_score, precision_score, recall_score, f1_score) 
 
 
 # =============================================================================
@@ -574,8 +575,89 @@ def main():
     print(f"     - knn_results['predictions']: KNN predictions for each k")
     print(f"     - tree_results['predictions']: Tree predictions for each depth")
     
-    # TODO: Add your Task 6 implementation here
+    # Task 6: Performance Metrics Analysis Implementation
+
+    def plot_confusion_matrix(y_true, y_pred, model_name, class_names=None):
+        """Visualize confusion matrix as a heatmap."""
+        cm = confusion_matrix(y_true, y_pred)
+        
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True,
+                    xticklabels=class_names, yticklabels=class_names)
+        plt.title(f'Confusion Matrix for {model_name}')
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
+        plt.tight_layout()
+        plt.show()
+
+    def evaluate_model(y_true, y_pred, model_name, class_names=None):
+        """Calculate and display comprehensive evaluation metrics."""
+        accuracy = accuracy_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred, average='weighted')
+        recall = recall_score(y_true, y_pred, average='weighted')
+        f1 = f1_score(y_true, y_pred, average='weighted')
+        
+        print(f"\n{model_name} Performance:")
+        print(f"  Accuracy:  {accuracy:.4f}")
+        print(f"  Precision: {precision:.4f}")
+        print(f"  Recall:    {recall:.4f}")
+        print(f"  F1 Score:  {f1:.4f}")
+        
+        plot_confusion_matrix(y_true, y_pred, model_name, class_names)
+        
+        return {
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1
+        }
     
+    # Evaluate KNN models
+    print("\n[Task 6] Evaluating KNN models...")
+    knn_metrics = []
+    for i, (k, predictions) in enumerate(zip(knn_results['k_values'], knn_results['predictions'])):
+        print(f"\n--- KNN with k={k} ---")
+        metrics = evaluate_model(
+            data['y_test'], 
+            predictions, 
+            f"KNN (k={k})", 
+            data['target_names']
+        )
+        knn_metrics.append({'k': k, 'metrics': metrics})
+    
+    # Evaluate Decision Tree models
+    print("\n[Task 6] Evaluating Decision Tree models...")
+    tree_metrics = []
+    for i, (depth, predictions) in enumerate(zip(tree_results['depths'], tree_results['predictions'])):
+        print(f"\n--- Decision Tree with depth={depth} ---")
+        metrics = evaluate_model(
+            data['y_test'], 
+            predictions, 
+            f"Decision Tree (depth={depth})", 
+            data['target_names']
+        )
+        tree_metrics.append({'depth': depth, 'metrics': metrics})
+    
+    # Find best models based on F1 score
+    best_knn = max(knn_metrics, key=lambda x: x['metrics']['f1_score'])
+    best_tree = max(tree_metrics, key=lambda x: x['metrics']['f1_score'])
+    
+    print(f"\n🏆 Best KNN Model: k={best_knn['k']} (F1={best_knn['metrics']['f1_score']:.4f})")
+    print(f"🏆 Best Decision Tree Model: depth={best_tree['depth']} (F1={best_tree['metrics']['f1_score']:.4f})")
+    
+    # Performance comparison summary
+    print(f"\n📊 Performance Summary:")
+    print(f"  Best KNN Accuracy: {best_knn['metrics']['accuracy']:.4f}")
+    print(f"  Best Tree Accuracy: {best_tree['metrics']['accuracy']:.4f}")
+    print(f"  Best KNN F1 Score: {best_knn['metrics']['f1_score']:.4f}")
+    print(f"  Best Tree F1 Score: {best_tree['metrics']['f1_score']:.4f}")
+    
+    # Misclassification analysis
+    print(f"\n🔍 Misclassification Analysis:")
+    print(f"  KNN (k={best_knn['k']}) misclassified {sum(data['y_test'] != knn_results['predictions'][knn_results['k_values'].index(best_knn['k'])])} out of {len(data['y_test'])} samples")
+    print(f"  Tree (depth={best_tree['depth']}) misclassified {sum(data['y_test'] != tree_results['predictions'][tree_results['depths'].index(best_tree['depth'])])} out of {len(data['y_test'])} samples")
+  
+
     
     # ========================================================================
     # TODO: TASK 7 - Explore Different Datasets
